@@ -8,6 +8,7 @@
 # profName: the name of the professor teaching the course
 # classTimes: a dictionary of ClassTime objects describing when class meetings take place; Keys are lowercase day identifiers (i.e. m, t, w, r, f)
 # openSpots: the number of open spots in the class
+# totalSpots: the total number of spots in the class
 # coursePageLink: the url of the corresponding course page on Class Search
 
 import ClassTime as ct
@@ -16,18 +17,18 @@ import ClassTime as ct
 class Class:
 
 	#Constructor for Class object
-	def __init__(self, name="", crn=0, courseNum = "", sectionNum = "", profName = "", classTimes={}, openSpots=0, coursePageLink=""):
+	def __init__(self, name="", crn=0, courseNum = "", sectionNum = "", profName = "", classTimes={}, openSpots=0, totalSpots=0, coursePageLink=""):
 		self.name = name
 		self.crn = crn
 		self.courseNum = courseNum
 		self.sectionNum = sectionNum
 		self.profName = profName
 		self.openSpots = openSpots
+		self.totalSpots = totalSpots
 		self.coursePageLink = coursePageLink
 
 		self.classTimes = {}
 		self.addTimes(classTimes)
-
 
 	# Function to add times to the class
 	def addTimes(self, times):
