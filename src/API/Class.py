@@ -11,7 +11,7 @@
 # totalSpots: the total number of spots in the class
 # coursePageLink: the url of the corresponding course page on Class Search
 
-import ClassTime as ct
+import src.API.ClassTime as ct
 
 #Class to represent a section of a course at Notre Dame
 class Class:
@@ -31,6 +31,7 @@ class Class:
 		self.addTimes(classTimes)
 
 	# Function to add times to the class
+	# times is a dictionary with a letter representing the day as the key, and the ClassTime object as the value
 	def addTimes(self, times):
 		for day in times:
 			self.classTimes[day.lower()] = times[day]
