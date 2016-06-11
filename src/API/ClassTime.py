@@ -8,7 +8,7 @@ import datetime as dt
 
 class ClassTime(object):
 
-    # Constructor for ClassTime object
+	# Constructor for ClassTime object
 	def __init__(self, startHour=0, startMin=0, endHour=0, endMin=0):
 		self.startTime = dt.time(startHour, startMin)
 		self.endTime = dt.time(endHour, endMin)
