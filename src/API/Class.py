@@ -12,6 +12,9 @@
 # coursePageLink: the url of the corresponding course page on Class Search
 
 import src.API.ClassTime as ct
+import logging
+
+logger = logging.getLogger(__name__)
 
 #Class to represent a section of a course at Notre Dame
 class Class:
@@ -29,12 +32,14 @@ class Class:
 
 		self.classTimes = {}
 		self.addTimes(classTimes)
+		logger.info("Creating Class instance for {}-{}...".format(courseNum, sectionNum))
 
 	# Function to add times to the class
 	# times is a dictionary with a letter representing the day as the key, and the ClassTime object as the value
 	def addTimes(self, times):
 		for day in times:
 			self.classTimes[day.upper()] = times[day]
+		logger.info("Adding times to {}-{}...".format(self.courseNum, self.sectionNum))
 
 	# Function to determine if two classes conflict
 	# Returns true if the classes conflict in their times, or if the two classes are from the same course
