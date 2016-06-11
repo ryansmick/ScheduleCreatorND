@@ -17,7 +17,7 @@ import src.API.ClassTime as ct
 class Class:
 
 	#Constructor for Class object
-	def __init__(self, name="", crn=0, courseNum = "", sectionNum = "", profName = "", classTimes={}, openSpots=0, totalSpots=0, coursePageLink=""):
+	def __init__(self, name="", crn="0", courseNum = "", sectionNum = "", profName = "", classTimes={}, openSpots=0, totalSpots=0, coursePageLink=""):
 		self.name = name
 		self.crn = crn
 		self.courseNum = courseNum
@@ -34,10 +34,14 @@ class Class:
 	# times is a dictionary with a letter representing the day as the key, and the ClassTime object as the value
 	def addTimes(self, times):
 		for day in times:
-			self.classTimes[day.lower()] = times[day]
+			self.classTimes[day.upper()] = times[day]
 
 	# Function to determine if two classes conflict
+	# Returns true if the classes conflict in their times, or if the two classes are from the same course
 	def conflictsWith(self, otherClass):
+		if self.courseNum == otherClass.courseNum:
+			return True
+
 		for day in self.classTimes:
 			if self.classTimes[day].conflictsWith(otherClass.classTimes[day]):
 				return True
