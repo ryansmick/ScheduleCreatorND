@@ -9,12 +9,16 @@ import requests
 import re
 import src.API.Class as Class
 import src.API.ClassTime as ct
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ClassSearchParser:
 	classSearchURL = 'https://class-search.nd.edu/reg/srch/ClassSearchServlet'
 
 	def __init__(self, term=None):
-		self.term = term if term else self.getMostRecentTerm()
+		logger.info("Creating ClassSearchParser instance...")
+		self.term = term if term else self.__getMostRecentTerm()
 
 
 	######Public facing functions#####
@@ -24,19 +28,14 @@ class ClassSearchParser:
 	#The variable courseNumberString is the department identifier combined with the five-digit number (e.g. CSE30331)
 	def getAllSectionsForCourse(self, courseNumberString):
 
-		#Remove all whitespace from courseNumber
-		courseNumberString.strip()
-		courseNumberString.replace(" ", "")
-
-		#Make the course number uppercase
-		courseNumberString = courseNumberString.upper()
+		courseNumberString = ClassSearchParser.__sanitizeCourseNumber(courseNumberString)
 
 		#Determine which department the course is in
 		match = re.match('(\w{2,4})(\d{5})', courseNumberString)
 		dept = match.group(1)
 		num = match.group(2)
 
-		table = self.getClassSearchTable(dept, self.term)
+		table = self.__getClassSearchTable(dept)
 
 		#Fill two dimensional array with info for each section of given class
 		sectionsHTML = []
@@ -50,21 +49,21 @@ class ClassSearchParser:
 		for section in sectionsHTML:
 			courseName = section[1].text
 			crn = section[7].text
-			sectionNum = ClassSearchParser.getSectionNumber(section[0].text)
-			profName = ClassSearchParser.sanitizeProf(section[9].text)
-			classTimes = ClassSearchParser.getClassTimes(section[10].text)
+			sectionNum = ClassSearchParser.__getSectionNumber(section[0].text)
+			profName = ClassSearchParser.__sanitizeProf(section[9].text)
+			classTimes = ClassSearchParser.__getClassTimes(section[10].text)
 			openSpots = int(section[5].text)
 			totalSpots = int(section[4].text)
-			coursePageLink = self.extractLinkToCoursePage(section[0])
-			for key in classTimes:
-				print("<" + classTimes[key].startTime.isoformat() + ">")
+			coursePageLink = self.__extractLinkToCoursePage(section[0])
 			sections.append(Class.Class(courseName, crn, courseNumberString, sectionNum, profName, classTimes, openSpots, totalSpots, coursePageLink))
 
+		logger.info("Returning all sections for {}...".format(courseNumberString))
 		return sections
 
 	#Function to get the corequisites for a specific course
 	def getCorecInfo(self, courseNumber):
 		url = ""
+		courseNumber = ClassSearchParser.__sanitizeCourseNumber(courseNumber)
 		courses = self.getAllSectionsForCourse(courseNumber)
 		if not courses:
 			return []
@@ -93,7 +92,8 @@ class ClassSearchParser:
 				corecInfo = []
 				for num in corecs:
 					corecInfo += self.getAllSectionsForCourse(num)
-
+				logger.debug("Corequisites of {}: {}".format(courseNumber, ", ".join(corecs)))
+				logger.info("Returning info for corecs of {}...".format(courseNumber))
 				return corecInfo
 		return []
 
@@ -102,8 +102,20 @@ class ClassSearchParser:
 
 
 	#Function to get the most recent term available on ClassSearch
+	@staticmethod
+	def __sanitizeCourseNumber(courseNumber):
+		# Remove all whitespace from courseNumber
+		courseNumber.strip()
+		courseNumber.replace(" ", "")
+
+		# Make the course number uppercase
+		courseNumber = courseNumber.upper()
+
+		logger.debug("Returning sanitized course number: {}...".format(courseNumber))
+		return courseNumber
+
 	@classmethod
-	def getMostRecentTerm(cls):
+	def __getMostRecentTerm(cls):
 		response = requests.post(cls.classSearchURL)
 		soup = BeautifulSoup(response.content, "html.parser")
 
@@ -114,17 +126,15 @@ class ClassSearchParser:
 		for option in options:
 			termNums.append(option['value'])
 
+		logger.debug("Getting most recent term: {}...".format(termNums[0]))
 		return termNums[0]
 
 	# Returns a BeautifulSoup object containing the table from the Class Search site
-	def getClassSearchTable(self, department, term=None):
-
-		if term == None:
-			term = self.term
+	def __getClassSearchTable(self, department):
 
 		# parsing parameters
 		data = {
-			'TERM': term,
+			'TERM': self.term,
 			'DIVS': 'A',
 			'CAMPUS': 'M',
 			'SUBJ': department,
@@ -142,18 +152,19 @@ class ClassSearchParser:
 		except AttributeError as e:
 			print("Error: invalid department: " + department)
 
+		logger.debug("Returning Class Search table for the {} department...".format(department))
 		return table
 
 	#Take the entire course number field from Class Search and parse it to obtain the section number
 	@staticmethod
-	def getSectionNumber(courseNumField):
+	def __getSectionNumber(courseNumField):
 		pattern = re.compile('\s\d{2}')
 		classSection = pattern.findall(courseNumField)[0]
 		return classSection[1:]
 
 	#Converts a time in the Class Search format to a time in hours and minutes
 	@staticmethod
-	def parseTime(time):
+	def __parseTime(time):
 		hour = 0
 		meridiem = time[-1]
 		splitTime = time[:-1].split(':')
@@ -176,7 +187,7 @@ class ClassSearchParser:
 	#Converts time from ClassSearch into a reasonable format
 	#Returns a dictionary of ClassTime objects with one-letter keys representing the days of the week
 	@staticmethod
-	def getClassTimes(timeString):
+	def __getClassTimes(timeString):
 		timeString = re.sub('\s', '', timeString)
 
 		#Account for possible multiple times
@@ -190,8 +201,8 @@ class ClassSearchParser:
 		classTimes = {}
 		for time in timesList:
 			splitTime = time.split("-")
-			(startHour, startMin) = ClassSearchParser.parseTime(splitTime[1])
-			(endHour, endMin) = ClassSearchParser.parseTime(splitTime[2])
+			(startHour, startMin) = ClassSearchParser.__parseTime(splitTime[1])
+			(endHour, endMin) = ClassSearchParser.__parseTime(splitTime[2])
 			time = ct.ClassTime(int(startHour), int(startMin), int(endHour), int(endMin))
 			for day in splitTime[0]:
 				classTimes[day] = time
@@ -200,16 +211,20 @@ class ClassSearchParser:
 
 	#Remove extraneous whitespace from professor field on ClassSearch
 	@staticmethod
-	def sanitizeProf(profName):
+	def __sanitizeProf(profName):
 		profName = profName.strip()
 		profName = profName.replace("\n", "")
 		return profName
 
 	#Takes in the field on the main page of ClassSearch that contains the link to the class page, and returns the link
 	@classmethod
-	def extractLinkToCoursePage(cls, linkField):
+	def __extractLinkToCoursePage(cls, linkField):
 		elem = linkField.findAll('a')[0]
 		pattern = re.compile("Servlet(\?[^']+)'")
 		result = pattern.findall(str(elem))[0]
 		result = result.replace('&amp;', '&')
 		return cls.classSearchURL + result
+
+if __name__ == '__main__':
+	parser = ClassSearchParser()
+	classes = parser.getAllSectionsForCourse("CSE30331")
