@@ -29,6 +29,7 @@ class ClassSearchParser:
 	def getAllSectionsForCourse(self, courseNumberString):
 
 		courseNumberString = ClassSearchParser.__sanitizeCourseNumber(courseNumberString)
+		print(courseNumberString)
 
 		#Determine which department the course is in
 		match = re.match('(\w{2,4})(\d{5})', courseNumberString)
@@ -105,8 +106,8 @@ class ClassSearchParser:
 	@staticmethod
 	def __sanitizeCourseNumber(courseNumber):
 		# Remove all whitespace from courseNumber
-		courseNumber.strip()
-		courseNumber.replace(" ", "")
+		courseNumber = courseNumber.strip()
+		courseNumber = courseNumber.replace(" ", "")
 
 		# Make the course number uppercase
 		courseNumber = courseNumber.upper()
@@ -227,4 +228,4 @@ class ClassSearchParser:
 
 if __name__ == '__main__':
 	parser = ClassSearchParser()
-	classes = parser.getAllSectionsForCourse("CSE30331")
+	classes = parser.getAllSectionsForCourse("CSE 30331")
