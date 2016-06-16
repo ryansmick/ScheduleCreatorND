@@ -12,6 +12,7 @@ import src.API.ClassTime as ct
 import logging
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class ClassSearchParser:
 	classSearchURL = 'https://class-search.nd.edu/reg/srch/ClassSearchServlet'

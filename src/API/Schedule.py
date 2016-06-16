@@ -30,3 +30,12 @@ class Schedule(object):
 		endTimes = [x.endTime for x in endTimes]
 
 		return max(endTimes)
+
+	# Function to add a class to the schedule
+	# Returns True if the class is successfully added, False otherwise
+	def addClass(self, newClass):
+		for section in self.classes:
+			if newClass.conflictsWith(section):
+				return False
+		self.classes.append(newClass)
+		return True
