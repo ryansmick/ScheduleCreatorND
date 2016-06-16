@@ -15,6 +15,7 @@ import src.API.ClassTime as ct
 import logging
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 #Class to represent a section of a course at Notre Dame
 class Class:
