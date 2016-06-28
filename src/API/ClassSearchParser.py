@@ -30,7 +30,6 @@ class ClassSearchParser:
 	def getAllSectionsForCourse(self, courseNumberString):
 
 		courseNumberString = ClassSearchParser.__sanitizeCourseNumber(courseNumberString)
-		print(courseNumberString)
 
 		#Determine which department the course is in
 		match = re.match('(\w{2,4})(\d{5})', courseNumberString)
@@ -62,15 +61,14 @@ class ClassSearchParser:
 		logger.info("Returning all sections for {}...".format(courseNumberString))
 		return sections
 
-	#Function to get the corequisites for a specific course
-	def getCorecInfo(self, courseNumber):
-		url = ""
-		courseNumber = ClassSearchParser.__sanitizeCourseNumber(courseNumber)
-		courses = self.getAllSectionsForCourse(courseNumber)
-		if not courses:
+	# Function to get the corequisites for a specific course
+	# classObject is an object of the Class class
+	def getCorecInfo(self, classObject):
+		try:
+			courseNumber = classObject.courseNum
+			url = classObject.coursePageLink
+		except:
 			return []
-		else:
-			url = courses[0].coursePageLink
 
 		response = requests.post(url)
 		soup = BeautifulSoup(response.content, "html.parser")
@@ -81,7 +79,6 @@ class ClassSearchParser:
 				data = soup.find('table', {'class':'datadisplaytable'}).find('td').text
 				pattern1 = re.compile('(Corequisites:.*?(Comments|Restrictions))', re.DOTALL)
 				corecString = pattern1.findall(data)[0]
-				print(corecString[0])
 				pattern2 = re.compile('[a-zA-Z]{2,4} \d{5}')
 				classSection = pattern2.findall(corecString[0])
 
@@ -93,7 +90,7 @@ class ClassSearchParser:
 
 				corecInfo = []
 				for num in corecs:
-					corecInfo += self.getAllSectionsForCourse(num)
+					corecInfo.append(self.getAllSectionsForCourse(num))
 				logger.debug("Corequisites of {}: {}".format(courseNumber, ", ".join(corecs)))
 				logger.info("Returning info for corecs of {}...".format(courseNumber))
 				return corecInfo
@@ -152,7 +149,7 @@ class ClassSearchParser:
 		try:
 			table = soup.find('table', {'id':'resulttable'}).find('tbody')
 		except AttributeError as e:
-			print("Error: invalid department: " + department)
+			logger.exception("Error: invalid department: " + department)
 
 		logger.debug("Returning Class Search table for the {} department...".format(department))
 		return table
