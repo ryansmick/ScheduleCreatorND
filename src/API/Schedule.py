@@ -39,3 +39,19 @@ class Schedule(object):
 				return False
 		self.classes.append(newClass)
 		return True
+
+	# Remove the last class added to the schedule
+	def removeLastClass(self):
+		self.classes = self.classes[:-1]
+
+	# Return the number of classes in the schedule
+	def size(self):
+		return len(self.classes)
+
+
+	# Method to allow use of the "in" operator for classes in the schedule
+	# Ex. if newClass in currentSchedule: now functions properly
+	def __contains__(self, item):
+		if item in self.classes:
+			return True
+		return False

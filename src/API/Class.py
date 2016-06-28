@@ -49,6 +49,14 @@ class Class:
 			return True
 
 		for day in self.classTimes:
-			if self.classTimes[day].conflictsWith(otherClass.classTimes[day]):
-				return True
+			try:
+				if self.classTimes[day].conflictsWith(otherClass.classTimes[day]):
+					return True
+			except KeyError:
+				pass
 		return False
+
+	# Function to allow use of in operator when a Class object is in a container
+	def __eq__(self, other):
+		areSame = ((self.courseNum == other.courseNum) and (self.sectionNum == other.sectionNum))
+		return areSame
