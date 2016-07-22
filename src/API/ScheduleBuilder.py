@@ -75,7 +75,3 @@ def __buildSchedules(currentSchedule, scheduleList, classArray2D):
 		if currentSchedule.addClass(classSection):
 			__buildSchedules(currentSchedule, scheduleList, classArray2D)
 			currentSchedule.removeLastClass()
-
-if __name__ == '__main__':
-	schedules = buildSchedules(["asdfads", "asdfa"])
-	print(schedules)
