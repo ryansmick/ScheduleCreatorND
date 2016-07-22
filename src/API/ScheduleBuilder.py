@@ -10,13 +10,14 @@ import copy
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# Return a list of Schedule objects representing all possible Schedules from the course numbers in the list
+# Return a tuple containing a list of Schedule objects representing all possible Schedules from the course numbers in the list, and a list of errors
 def buildSchedules(courseNumberList):
 	# Given the list of courses, retrieve the corresponding Course objects and compile them
 	# into a 2D list where each row represents a course, and columns are sections of each course
 
 	# Remove duplicates
 	courseNumberList = list(set(courseNumberList))
+	errorsList = []
 
 	# Build the two dimensional array of Class objects that will be used to create the schedules
 	classArray2D = []
@@ -25,8 +26,15 @@ def buildSchedules(courseNumberList):
 	logger.info("Gathering course information...")
 	for courseNumberString in courseNumberList:
 		# Get sections of given course
-		sections = parser.getAllSectionsForCourse(courseNumberString)
+		sections = []
+		try:
+			sections = parser.getAllSectionsForCourse(courseNumberString)
+		except AttributeError as e:
+			logger.exception(str(e))
+			errorsList.append(str(e))
+			continue
 		if not sections:
+			errorsList.append("Course {} not found".format(courseNumberString))
 			continue
 
 		# Check if the course exists in 2dClassArray
@@ -43,14 +51,14 @@ def buildSchedules(courseNumberList):
 				coursesAdded.append(corecSectionList[0].courseNum)
 
 	if len(classArray2D) == 0:
-		return None
+		return ([], errorsList)
 
 	# Call a helper function to build the schedules
 	logger.info("Building schedules...")
 	schedule = Schedule.Schedule()
 	scheduleList = []
 	__buildSchedules(schedule, scheduleList, classArray2D)
-	return scheduleList
+	return (scheduleList, errorsList)
 
 # Helper function for creating the list of Schedule objects
 def __buildSchedules(currentSchedule, scheduleList, classArray2D):
@@ -67,3 +75,7 @@ def __buildSchedules(currentSchedule, scheduleList, classArray2D):
 		if currentSchedule.addClass(classSection):
 			__buildSchedules(currentSchedule, scheduleList, classArray2D)
 			currentSchedule.removeLastClass()
+
+if __name__ == '__main__':
+	schedules = buildSchedules(["asdfads", "asdfa"])
+	print(schedules)

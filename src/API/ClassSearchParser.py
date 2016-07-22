@@ -27,16 +27,24 @@ class ClassSearchParser:
 
 	#Retrieve table row in ClassSearch for each section of given class
 	#The variable courseNumberString is the department identifier combined with the five-digit number (e.g. CSE30331)
+	#Raises an AttributeError when the course number can't be parsed, or the department is invalid.
+	# Returns an empty list if the specific course isn't found
 	def getAllSectionsForCourse(self, courseNumberString):
 
 		courseNumberString = ClassSearchParser.__sanitizeCourseNumber(courseNumberString)
 
 		#Determine which department the course is in
-		match = re.match('(\w{2,4})(\d{5})', courseNumberString)
-		dept = match.group(1)
-		num = match.group(2)
+		try:
+			match = re.match('(\w{2,4})(\d{5})', courseNumberString)
+			dept = match.group(1)
+			num = match.group(2)
+		except AttributeError as e:
+			raise AttributeError("Invalid course number format for {}".format(courseNumberString)) from e
 
-		table = self.__getClassSearchTable(dept)
+		try:
+			table = self.__getClassSearchTable(dept)
+		except AttributeError as e:
+			raise e
 
 		#Fill two dimensional array with info for each section of given class
 		sectionsHTML = []
@@ -129,6 +137,7 @@ class ClassSearchParser:
 		return termNums[0]
 
 	# Returns a BeautifulSoup object containing the table from the Class Search site
+	# Raises an AttributeError when an invalid department is given
 	def __getClassSearchTable(self, department):
 
 		# parsing parameters
@@ -149,7 +158,8 @@ class ClassSearchParser:
 		try:
 			table = soup.find('table', {'id':'resulttable'}).find('tbody')
 		except AttributeError as e:
-			logger.exception("Error: invalid department: " + department)
+			logger.exception("Error: invalid department: ".format(department))
+			raise AttributeError("Invalid department {}".format(department)) from e
 
 		logger.debug("Returning Class Search table for the {} department...".format(department))
 		return table
