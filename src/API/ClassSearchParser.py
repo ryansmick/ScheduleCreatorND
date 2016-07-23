@@ -1,7 +1,11 @@
 # ClassSearchParser.py
+# This module contains two classes: ClassSearchPaser and ClassSearchParserWithCaching
+
+# ClassSearchParser:
 # This class is used to scrape Notre Dame's Class Search website to pull class information and organize it
 # Class variables:
 # url: the url of the Class Search page
+# Instance Variables:
 # term: the term for which the user wishes to choose classes
 
 from bs4 import BeautifulSoup
@@ -11,14 +15,18 @@ import src.API.Class as Class
 import src.API.ClassTime as ct
 import logging
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-class ClassSearchParser:
+class ClassSearchParser(object):
 	classSearchURL = 'https://class-search.nd.edu/reg/srch/ClassSearchServlet'
 
+	logger = logging.getLogger(__name__)
+	logger.setLevel(logging.DEBUG)
+
+	#Constructor for ClassSearchParser
+	#Takes a term and a cacheTables flag as inputs
+	#The cacheTables flag will save the table for each department in memory so
+	#it doesn't have to be retrieved again if needed
 	def __init__(self, term=None):
-		logger.info("Creating ClassSearchParser instance...")
+		ClassSearchParser.logger.info("Creating ClassSearchParser instance...")
 		self.term = term if term else self.__getMostRecentTerm()
 
 
@@ -27,8 +35,7 @@ class ClassSearchParser:
 
 	#Retrieve table row in ClassSearch for each section of given class
 	#The variable courseNumberString is the department identifier combined with the five-digit number (e.g. CSE30331)
-	#Raises an AttributeError when the course number can't be parsed, or the department is invalid.
-	# Returns an empty list if the specific course isn't found
+	#Raises a ValueError when the course number can't be parsed, the department is invalid, or the course can't be found.
 	def getAllSectionsForCourse(self, courseNumberString):
 
 		courseNumberString = ClassSearchParser.__sanitizeCourseNumber(courseNumberString)
@@ -39,12 +46,12 @@ class ClassSearchParser:
 			dept = match.group(1)
 			num = match.group(2)
 		except AttributeError as e:
-			raise AttributeError("Invalid course number format for {}".format(courseNumberString)) from e
+			raise ValueError("Invalid course number format for {}".format(courseNumberString)) from e
 
 		try:
-			table = self.__getClassSearchTable(dept)
-		except AttributeError as e:
-			raise e
+			table = self._getClassSearchTable(dept)
+		except ValueError as e:
+			raise
 
 		#Fill two dimensional array with info for each section of given class
 		sectionsHTML = []
@@ -52,6 +59,9 @@ class ClassSearchParser:
 			cells = row.findAll('td')
 			if re.match(courseNumberString, cells[0].text):
 				sectionsHTML.append(cells)
+
+		if not sectionsHTML:
+			raise ValueError("Course {} not found".format(courseNumberString))
 
 		#Create class objects for each class
 		sections = []
@@ -66,7 +76,7 @@ class ClassSearchParser:
 			coursePageLink = self.__extractLinkToCoursePage(section[0])
 			sections.append(Class.Class(courseName, crn, courseNumberString, sectionNum, profName, classTimes, openSpots, totalSpots, coursePageLink))
 
-		logger.info("Returning all sections for {}...".format(courseNumberString))
+		ClassSearchParser.logger.info("Returning all sections for {}...".format(courseNumberString))
 		return sections
 
 	# Function to get the corequisites for a specific course
@@ -99,8 +109,8 @@ class ClassSearchParser:
 				corecInfo = []
 				for num in corecs:
 					corecInfo.append(self.getAllSectionsForCourse(num))
-				logger.debug("Corequisites of {}: {}".format(courseNumber, ", ".join(corecs)))
-				logger.info("Returning info for corecs of {}...".format(courseNumber))
+				ClassSearchParser.logger.debug("Corequisites of {}: {}".format(courseNumber, ", ".join(corecs)))
+				ClassSearchParser.logger.info("Returning info for corecs of {}...".format(courseNumber))
 				return corecInfo
 		return []
 
@@ -118,7 +128,7 @@ class ClassSearchParser:
 		# Make the course number uppercase
 		courseNumber = courseNumber.upper()
 
-		logger.debug("Returning sanitized course number: {}...".format(courseNumber))
+		ClassSearchParser.logger.debug("Returning sanitized course number: {}...".format(courseNumber))
 		return courseNumber
 
 	@classmethod
@@ -133,12 +143,12 @@ class ClassSearchParser:
 		for option in options:
 			termNums.append(option['value'])
 
-		logger.debug("Getting most recent term: {}...".format(termNums[0]))
+		ClassSearchParser.logger.debug("Getting most recent term: {}...".format(termNums[0]))
 		return termNums[0]
 
 	# Returns a BeautifulSoup object containing the table from the Class Search site
-	# Raises an AttributeError when an invalid department is given
-	def __getClassSearchTable(self, department):
+	# Raises a ValueError when an invalid department is given
+	def _getClassSearchTable(self, department):
 
 		# parsing parameters
 		data = {
@@ -158,10 +168,10 @@ class ClassSearchParser:
 		try:
 			table = soup.find('table', {'id':'resulttable'}).find('tbody')
 		except AttributeError as e:
-			logger.exception("Error: invalid department: ".format(department))
-			raise AttributeError("Invalid department {}".format(department)) from e
+			ClassSearchParser.logger.exception("Error: invalid department: ".format(department))
+			raise ValueError("Invalid department {}".format(department)) from e
 
-		logger.debug("Returning Class Search table for the {} department...".format(department))
+		ClassSearchParser.logger.debug("Returning Class Search table for the {} department...".format(department))
 		return table
 
 	#Take the entire course number field from Class Search and parse it to obtain the section number
@@ -234,6 +244,30 @@ class ClassSearchParser:
 		result = result.replace('&amp;', '&')
 		return cls.classSearchURL + result
 
-if __name__ == '__main__':
-	parser = ClassSearchParser()
-	classes = parser.getAllSectionsForCourse("CSE 30331")
+
+# ClassSearchParserWithCaching:
+# This class extends ClassSearchParser to allow for caching of Class Search tables, allowing for faster results when
+# users are taking multiple classes within the same department
+# Instance variables:
+# tableCache: a dictionary with the department as the key and the BeautifulSoup object representing the
+#   Class Search table as the value
+class ClassSearchParserWithCaching(ClassSearchParser):
+	logger = logging.getLogger(__name__)
+	logger.setLevel(logging.DEBUG)
+
+	def __init__(self, term = None):
+		super().__init__(term=term)
+		self.tableCache = {}
+
+	def _getClassSearchTable(self, department):
+		try:
+			table = self.tableCache[department]
+			ClassSearchParserWithCaching.logger.info("Table for {} found in cache")
+		except KeyError:
+			ClassSearchParserWithCaching.logger.info("Table for {} not found in cache. Retrieving...")
+			try:
+				table = super()._getClassSearchTable(department)
+				self.tableCache[department] = table
+			except ValueError:
+				raise
+		return table

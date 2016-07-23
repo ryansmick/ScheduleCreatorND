@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 #Class to represent a section of a course at Notre Dame
-class Class:
+class Class(object):
 
 	#Constructor for Class object
 	def __init__(self, name="", crn="0", courseNum = "", sectionNum = "", profName = "", classTimes={}, openSpots=0, totalSpots=0, coursePageLink=""):
