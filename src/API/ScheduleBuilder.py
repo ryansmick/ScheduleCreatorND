@@ -21,7 +21,7 @@ def buildSchedules(courseNumberList):
 
 	# Build the two dimensional array of Class objects that will be used to create the schedules
 	classArray2D = []
-	parser = CSP.ClassSearchParser()
+	parser = CSP.ClassSearchParserWithCaching()
 	coursesAdded = []
 	logger.info("Gathering course information...")
 	for courseNumberString in courseNumberList:
@@ -29,7 +29,7 @@ def buildSchedules(courseNumberList):
 		sections = []
 		try:
 			sections = parser.getAllSectionsForCourse(courseNumberString)
-		except AttributeError as e:
+		except ValueError as e:
 			logger.exception(str(e))
 			errorsList.append(str(e))
 			continue
