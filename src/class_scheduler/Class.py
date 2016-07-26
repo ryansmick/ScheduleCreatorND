@@ -11,7 +11,6 @@
 # totalSpots: the total number of spots in the class
 # coursePageLink: the url of the corresponding course page on Class Search
 
-import src.API.ClassTime as ct
 import logging
 
 logger = logging.getLogger(__name__)

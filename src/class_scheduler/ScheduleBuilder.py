@@ -2,8 +2,8 @@
 # This module contains a function to, given a list of course numbers, build a list of Schedule objects representing
 # all possible schedules that can be taken with the given courses
 
-import src.API.ClassSearchParser as CSP
-import src.API.Schedule as Schedule
+from . import CoursePageParser as CPP
+from . import Schedule
 import logging
 import copy
 
@@ -21,7 +21,7 @@ def buildSchedules(courseNumberList):
 
 	# Build the two dimensional array of Class objects that will be used to create the schedules
 	classArray2D = []
-	parser = CSP.ClassSearchParserWithCaching()
+	parser = CPP.ClassSearchParserWithCaching()
 	coursesAdded = []
 	logger.info("Gathering course information...")
 	for courseNumberString in courseNumberList:
@@ -75,3 +75,5 @@ def __buildSchedules(currentSchedule, scheduleList, classArray2D):
 		if currentSchedule.addClass(classSection):
 			__buildSchedules(currentSchedule, scheduleList, classArray2D)
 			currentSchedule.removeLastClass()
+if __name__ == '__main__':
+	buildSchedules(["CSE30311"])

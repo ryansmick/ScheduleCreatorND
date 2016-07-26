@@ -11,8 +11,8 @@
 from bs4 import BeautifulSoup
 import requests
 import re
-import src.API.Class as Class
-import src.API.ClassTime as ct
+from . import Class
+from . import ClassTime as ct
 import logging
 
 class ClassSearchParser(object):
