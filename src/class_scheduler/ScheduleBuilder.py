@@ -2,8 +2,7 @@
 # This module contains a function to, given a list of course numbers, build a list of Schedule objects representing
 # all possible schedules that can be taken with the given courses
 
-from . import CoursePageParser as CPP
-from . import Schedule
+from src. class_scheduler import Schedule
 import logging
 import copy
 
@@ -11,7 +10,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # Return a tuple containing a list of Schedule objects representing all possible Schedules from the course numbers in the list, and a list of errors
-def buildSchedules(courseNumberList):
+def buildSchedules(parser, courseNumberList):
 	# Given the list of courses, retrieve the corresponding Course objects and compile them
 	# into a 2D list where each row represents a course, and columns are sections of each course
 
@@ -21,7 +20,6 @@ def buildSchedules(courseNumberList):
 
 	# Build the two dimensional array of Class objects that will be used to create the schedules
 	classArray2D = []
-	parser = CPP.ClassSearchParserWithCaching()
 	coursesAdded = []
 	logger.info("Gathering course information...")
 	for courseNumberString in courseNumberList:
@@ -55,7 +53,7 @@ def buildSchedules(courseNumberList):
 
 	# Call a helper function to build the schedules
 	logger.info("Building schedules...")
-	schedule = Schedule.Schedule()
+	schedule = Schedule()
 	scheduleList = []
 	__buildSchedules(schedule, scheduleList, classArray2D)
 	return (scheduleList, errorsList)
@@ -75,5 +73,3 @@ def __buildSchedules(currentSchedule, scheduleList, classArray2D):
 		if currentSchedule.addClass(classSection):
 			__buildSchedules(currentSchedule, scheduleList, classArray2D)
 			currentSchedule.removeLastClass()
-if __name__ == '__main__':
-	buildSchedules(["CSE30311"])
