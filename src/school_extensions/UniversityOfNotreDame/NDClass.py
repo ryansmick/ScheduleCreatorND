@@ -1,4 +1,4 @@
-# Class.py
+# NDClass.py
 # This class defines a section of a course at Notre Dame
 # Member variables:
 # name: the name of the course
@@ -11,18 +11,18 @@
 # totalSpots: the total number of spots in the class
 # coursePageLink: the url of the corresponding course page on Class Search
 
-import src.API.ClassTime as ct
+from src.class_scheduler import Class
 import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 #Class to represent a section of a course at Notre Dame
-class Class(object):
+class NDClass(Class):
 
 	#Constructor for Class object
-	def __init__(self, name="", crn="0", courseNum = "", sectionNum = "", profName = "", classTimes={}, openSpots=0, totalSpots=0, coursePageLink=""):
-		self.name = name
+	def __init__(self, name="", crn="00000", courseNum = "", sectionNum = "", profName = "", classTimes={}, openSpots=0, totalSpots=0, coursePageLink=""):
+		super().__init__(name, classTimes)
 		self.crn = crn
 		self.courseNum = courseNum
 		self.sectionNum = sectionNum
@@ -30,17 +30,7 @@ class Class(object):
 		self.openSpots = openSpots
 		self.totalSpots = totalSpots
 		self.coursePageLink = coursePageLink
-
-		self.classTimes = {}
-		self.addTimes(classTimes)
 		logger.info("Creating Class instance for {}-{}...".format(courseNum, sectionNum))
-
-	# Function to add times to the class
-	# times is a dictionary with a letter representing the day as the key, and the ClassTime object as the value
-	def addTimes(self, times):
-		for day in times:
-			self.classTimes[day.upper()] = times[day]
-		logger.info("Adding times to {}-{}...".format(self.courseNum, self.sectionNum))
 
 	# Function to determine if two classes conflict
 	# Returns true if the classes conflict in their times, or if the two classes are from the same course

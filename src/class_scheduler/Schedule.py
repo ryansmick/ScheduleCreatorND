@@ -3,10 +3,6 @@
 # Member variables:
 # classes: a list of Class objects that represent the classes in the schedule
 
-import src.API.ClassTime as ct
-import src.API.Class as Class
-import datetime as dt
-
 class Schedule(object):
 
 	# Constructor for Schedule object

@@ -1,7 +1,7 @@
-# ClassSearchParser.py
-# This module contains two classes: ClassSearchPaser and ClassSearchParserWithCaching
+# NDClassSearchParser.py
+# This module contains two classes: NDClassSearchParser and NDClassSearchParserWithCaching
 
-# ClassSearchParser:
+# NDClassSearchParser:
 # This class is used to scrape Notre Dame's Class Search website to pull class information and organize it
 # Class variables:
 # url: the url of the Class Search page
@@ -11,22 +11,22 @@
 from bs4 import BeautifulSoup
 import requests
 import re
-import src.API.Class as Class
-import src.API.ClassTime as ct
+from . import NDClass
+from src.class_scheduler import CoursePageParser, ClassTime
 import logging
 
-class ClassSearchParser(object):
+class NDClassSearchParser(CoursePageParser):
 	classSearchURL = 'https://class-search.nd.edu/reg/srch/ClassSearchServlet'
 
 	logger = logging.getLogger(__name__)
 	logger.setLevel(logging.DEBUG)
 
-	#Constructor for ClassSearchParser
+	#Constructor for NDClassSearchParser
 	#Takes a term and a cacheTables flag as inputs
 	#The cacheTables flag will save the table for each department in memory so
 	#it doesn't have to be retrieved again if needed
 	def __init__(self, term=None):
-		ClassSearchParser.logger.info("Creating ClassSearchParser instance...")
+		NDClassSearchParser.logger.info("Creating NDClassSearchParser instance...")
 		self.term = term if term else self.__getMostRecentTerm()
 
 
@@ -38,7 +38,7 @@ class ClassSearchParser(object):
 	#Raises a ValueError when the course number can't be parsed, the department is invalid, or the course can't be found.
 	def getAllSectionsForCourse(self, courseNumberString):
 
-		courseNumberString = ClassSearchParser.__sanitizeCourseNumber(courseNumberString)
+		courseNumberString = NDClassSearchParser.__sanitizeCourseNumber(courseNumberString)
 
 		#Determine which department the course is in
 		try:
@@ -68,15 +68,15 @@ class ClassSearchParser(object):
 		for section in sectionsHTML:
 			courseName = section[1].text
 			crn = section[7].text
-			sectionNum = ClassSearchParser.__getSectionNumber(section[0].text)
-			profName = ClassSearchParser.__sanitizeProf(section[9].text)
-			classTimes = ClassSearchParser.__getClassTimes(section[10].text)
+			sectionNum = NDClassSearchParser.__getSectionNumber(section[0].text)
+			profName = NDClassSearchParser.__sanitizeProf(section[9].text)
+			classTimes = NDClassSearchParser.__getClassTimes(section[10].text)
 			openSpots = int(section[5].text)
 			totalSpots = int(section[4].text)
 			coursePageLink = self.__extractLinkToCoursePage(section[0])
-			sections.append(Class.Class(courseName, crn, courseNumberString, sectionNum, profName, classTimes, openSpots, totalSpots, coursePageLink))
+			sections.append(NDClass.NDClass(courseName, crn, courseNumberString, sectionNum, profName, classTimes, openSpots, totalSpots, coursePageLink))
 
-		ClassSearchParser.logger.info("Returning all sections for {}...".format(courseNumberString))
+		NDClassSearchParser.logger.info("Returning all sections for {}...".format(courseNumberString))
 		return sections
 
 	# Function to get the corequisites for a specific course
@@ -109,8 +109,8 @@ class ClassSearchParser(object):
 				corecInfo = []
 				for num in corecs:
 					corecInfo.append(self.getAllSectionsForCourse(num))
-				ClassSearchParser.logger.debug("Corequisites of {}: {}".format(courseNumber, ", ".join(corecs)))
-				ClassSearchParser.logger.info("Returning info for corecs of {}...".format(courseNumber))
+				NDClassSearchParser.logger.debug("Corequisites of {}: {}".format(courseNumber, ", ".join(corecs)))
+				NDClassSearchParser.logger.info("Returning info for corecs of {}...".format(courseNumber))
 				return corecInfo
 		return []
 
@@ -128,7 +128,7 @@ class ClassSearchParser(object):
 		# Make the course number uppercase
 		courseNumber = courseNumber.upper()
 
-		ClassSearchParser.logger.debug("Returning sanitized course number: {}...".format(courseNumber))
+		NDClassSearchParser.logger.debug("Returning sanitized course number: {}...".format(courseNumber))
 		return courseNumber
 
 	@classmethod
@@ -143,7 +143,7 @@ class ClassSearchParser(object):
 		for option in options:
 			termNums.append(option['value'])
 
-		ClassSearchParser.logger.debug("Getting most recent term: {}...".format(termNums[0]))
+		NDClassSearchParser.logger.debug("Getting most recent term: {}...".format(termNums[0]))
 		return termNums[0]
 
 	# Returns a BeautifulSoup object containing the table from the Class Search site
@@ -168,10 +168,10 @@ class ClassSearchParser(object):
 		try:
 			table = soup.find('table', {'id':'resulttable'}).find('tbody')
 		except AttributeError as e:
-			ClassSearchParser.logger.exception("Error: invalid department: ".format(department))
+			NDClassSearchParser.logger.exception("Error: invalid department: ".format(department))
 			raise ValueError("Invalid department {}".format(department)) from e
 
-		ClassSearchParser.logger.debug("Returning Class Search table for the {} department...".format(department))
+		NDClassSearchParser.logger.debug("Returning Class Search table for the {} department...".format(department))
 		return table
 
 	#Take the entire course number field from Class Search and parse it to obtain the section number
@@ -220,9 +220,9 @@ class ClassSearchParser(object):
 		classTimes = {}
 		for time in timesList:
 			splitTime = time.split("-")
-			(startHour, startMin) = ClassSearchParser.__parseTime(splitTime[1])
-			(endHour, endMin) = ClassSearchParser.__parseTime(splitTime[2])
-			time = ct.ClassTime(int(startHour), int(startMin), int(endHour), int(endMin))
+			(startHour, startMin) = NDClassSearchParser.__parseTime(splitTime[1])
+			(endHour, endMin) = NDClassSearchParser.__parseTime(splitTime[2])
+			time = ClassTime(int(startHour), int(startMin), int(endHour), int(endMin))
 			for day in splitTime[0]:
 				classTimes[day] = time
 
@@ -245,13 +245,13 @@ class ClassSearchParser(object):
 		return cls.classSearchURL + result
 
 
-# ClassSearchParserWithCaching:
-# This class extends ClassSearchParser to allow for caching of Class Search tables, allowing for faster results when
+# NDClassSearchParserWithCaching:
+# This class extends NDClassSearchParser to allow for caching of Class Search tables, allowing for faster results when
 # users are taking multiple classes within the same department
 # Instance variables:
 # tableCache: a dictionary with the department as the key and the BeautifulSoup object representing the
 #   Class Search table as the value
-class ClassSearchParserWithCaching(ClassSearchParser):
+class NDClassSearchParserWithCaching(NDClassSearchParser):
 	logger = logging.getLogger(__name__)
 	logger.setLevel(logging.DEBUG)
 
@@ -262,9 +262,9 @@ class ClassSearchParserWithCaching(ClassSearchParser):
 	def _getClassSearchTable(self, department):
 		try:
 			table = self.tableCache[department]
-			ClassSearchParserWithCaching.logger.info("Table for {} found in cache")
+			NDClassSearchParserWithCaching.logger.info("Table for {} found in cache")
 		except KeyError:
-			ClassSearchParserWithCaching.logger.info("Table for {} not found in cache. Retrieving...")
+			NDClassSearchParserWithCaching.logger.info("Table for {} not found in cache. Retrieving...")
 			try:
 				table = super()._getClassSearchTable(department)
 				self.tableCache[department] = table
