@@ -10,7 +10,9 @@ class Class(ABC):
 	# Constructor for Class object
 	# Subclasses should define member variables self.name and self.classTimes
 	#name: the name of the course
-	# classTimes: a dictionary of ClassTime objects describing when class meetings take place; Keys are uppercase day identifiers (i.e. M, T, W, R, F)
+	# classTimes: a dictionary of ClassTime objects describing when class meetings take place;
+	#   Keys are uppercase day identifiers (i.e. M, T, W, R, F)
+	#   Use the key "U" with an UndefinedClassTime object to indicate that a particular class has an undefined time
 	def __init__(self, name, classTimes):
 		self.name = name
 		self.classTimes = {}
