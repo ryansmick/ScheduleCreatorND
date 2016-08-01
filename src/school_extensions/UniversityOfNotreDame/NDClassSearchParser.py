@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 import requests
 import re
 from . import NDClass
-from src.class_scheduler import CoursePageParser, ClassTime
+from src.class_scheduler import CoursePageParser, ClassTime, UndefinedClassTime
 import logging
 
 class NDClassSearchParser(CoursePageParser):
@@ -70,7 +70,10 @@ class NDClassSearchParser(CoursePageParser):
 			crn = section[7].text
 			sectionNum = NDClassSearchParser.__getSectionNumber(section[0].text)
 			profName = NDClassSearchParser.__sanitizeProf(section[9].text)
-			classTimes = NDClassSearchParser.__getClassTimes(section[10].text)
+			try:
+				classTimes = NDClassSearchParser.__getClassTimes(section[10].text)
+			except ValueError:
+				classTimes = {"U":UndefinedClassTime()}
 			openSpots = int(section[5].text)
 			totalSpots = int(section[4].text)
 			coursePageLink = self.__extractLinkToCoursePage(section[0])
@@ -205,6 +208,7 @@ class NDClassSearchParser(CoursePageParser):
 
 	#Converts time from ClassSearch into a reasonable format
 	#Returns a dictionary of ClassTime objects with one-letter keys representing the days of the week
+	#Raises a ValueError if any of the times in timeString is in an unsupported format
 	@staticmethod
 	def __getClassTimes(timeString):
 		timeString = re.sub('\s', '', timeString)
@@ -219,12 +223,16 @@ class NDClassSearchParser(CoursePageParser):
 		# Example time in timeString: 'MWF-10:30A-11:20A'
 		classTimes = {}
 		for time in timesList:
-			splitTime = time.split("-")
-			(startHour, startMin) = NDClassSearchParser.__parseTime(splitTime[1])
-			(endHour, endMin) = NDClassSearchParser.__parseTime(splitTime[2])
-			time = ClassTime(int(startHour), int(startMin), int(endHour), int(endMin))
-			for day in splitTime[0]:
-				classTimes[day] = time
+			try:
+				splitTime = time.split("-")
+				(startHour, startMin) = NDClassSearchParser.__parseTime(splitTime[1])
+				(endHour, endMin) = NDClassSearchParser.__parseTime(splitTime[2])
+				time = ClassTime(int(startHour), int(startMin), int(endHour), int(endMin))
+				for day in splitTime[0]:
+					classTimes[day] = time
+			except IndexError:
+				NDClassSearchParser.logger.exception("Unexpected format for time {}".format(time))
+				raise ValueError("Time {} is in an unsupported format".format(time))
 
 		return classTimes
 
