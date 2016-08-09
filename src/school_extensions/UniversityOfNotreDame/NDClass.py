@@ -21,7 +21,8 @@ logger.setLevel(logging.DEBUG)
 class NDClass(Class):
 
 	#Constructor for Class object
-	def __init__(self, name, courseNum, sectionNum, classTimes, crn="00000", profName = "", openSpots=0, totalSpots=0, coursePageLink=""):
+	def __init__(self, name, courseNum, sectionNum, classTimes, crn="00000", profName = "", openSpots=0, totalSpots=0,
+	             coursePageLink=""):
 		super().__init__(name, courseNum, sectionNum, classTimes)
 		self.crn = crn
 		self.profName = profName

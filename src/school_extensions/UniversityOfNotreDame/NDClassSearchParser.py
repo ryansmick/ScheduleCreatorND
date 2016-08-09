@@ -36,7 +36,9 @@ class NDClassSearchParser(CoursePageParser):
 	#Retrieve table row in ClassSearch for each section of given class
 	#The variable courseNumberString is the department identifier combined with the five-digit number (e.g. CSE30331)
 	#Raises a ValueError when the course number can't be parsed, the department is invalid, or the course can't be found.
-	def getAllSectionsForCourse(self, courseNumberString):
+	#I'm not sure if the addCorecs flag is the correct way to handle the infinite loop issue, but it's the best
+	#solution that I have for now
+	def getAllSectionsForCourse(self, courseNumberString, addCorecs=True):
 
 		courseNumberString = NDClassSearchParser.__sanitizeCourseNumber(courseNumberString)
 
@@ -77,19 +79,29 @@ class NDClassSearchParser(CoursePageParser):
 			openSpots = int(section[5].text)
 			totalSpots = int(section[4].text)
 			coursePageLink = self.__extractLinkToCoursePage(section[0])
-			sections.append(NDClass.NDClass(courseName, courseNumberString, sectionNum, classTimes, crn, profName, openSpots, totalSpots, coursePageLink))
+			newClass = NDClass.NDClass(courseName, courseNumberString, sectionNum, classTimes, crn, profName, openSpots, totalSpots, coursePageLink)
+			if addCorecs:
+				self._populateCorecs(newClass)
+			sections.append(newClass)
 
 		NDClassSearchParser.logger.info("Returning all sections for {}...".format(courseNumberString))
 		return sections
 
-	# Function to get the corequisites for a specific course
+
+
+	######Internal Functions######
+
+
+
+	# Helper function to populate the corequisites field for a specific Class object
 	# classObject is an object of the Class class
-	def getCorecInfo(self, classObject):
+	# Does not return anything, but rather changes the corecs attribute of classObject
+	def _populateCorecs(self, classObject):
 		try:
 			courseNumber = classObject.courseNum
 			url = classObject.coursePageLink
-		except:
-			return []
+		except AttributeError:
+			return
 
 		response = requests.post(url)
 		soup = BeautifulSoup(response.content, "html.parser")
@@ -101,25 +113,19 @@ class NDClassSearchParser(CoursePageParser):
 				pattern1 = re.compile('(Corequisites:.*?(Comments|Restrictions))', re.DOTALL)
 				corecString = pattern1.findall(data)[0]
 				pattern2 = re.compile('[a-zA-Z]{2,4} \d{5}')
-				classSection = pattern2.findall(corecString[0])
+				corecCourseNums = pattern2.findall(corecString[0])
 
 				#Normalize each course number
 				corecs = []
-				for num in classSection:
+				for num in corecCourseNums:
 					num = num.replace(" ", "")
 					corecs.append(num)
 
 				corecInfo = []
 				for num in corecs:
-					corecInfo.append(self.getAllSectionsForCourse(num))
-				NDClassSearchParser.logger.debug("Corequisites of {}: {}".format(courseNumber, ", ".join(corecs)))
-				NDClassSearchParser.logger.info("Returning info for corecs of {}...".format(courseNumber))
+					classObject.corecs.insertSectionsForNewCourse(num, self.getAllSectionsForCourse(num, addCorecs=False))
+				NDClassSearchParser.logger.info("Retrieved info for corecs of {}...".format(courseNumber))
 				return corecInfo
-		return []
-
-
-	######Internal Functions######
-
 
 	#Function to get the most recent term available on ClassSearch
 	@staticmethod
