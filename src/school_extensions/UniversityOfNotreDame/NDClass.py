@@ -21,11 +21,9 @@ logger.setLevel(logging.DEBUG)
 class NDClass(Class):
 
 	#Constructor for Class object
-	def __init__(self, name="", crn="00000", courseNum = "", sectionNum = "", profName = "", classTimes={}, openSpots=0, totalSpots=0, coursePageLink=""):
-		super().__init__(name, classTimes)
+	def __init__(self, name, courseNum, sectionNum, classTimes, crn="00000", profName = "", openSpots=0, totalSpots=0, coursePageLink=""):
+		super().__init__(name, courseNum, sectionNum, classTimes)
 		self.crn = crn
-		self.courseNum = courseNum
-		self.sectionNum = sectionNum
 		self.profName = profName
 		self.openSpots = openSpots
 		self.totalSpots = totalSpots
@@ -45,8 +43,3 @@ class NDClass(Class):
 			except KeyError:
 				pass
 		return False
-
-	# Function to allow use of in operator when a Class object is in a container
-	def __eq__(self, other):
-		areSame = ((self.courseNum == other.courseNum) and (self.sectionNum == other.sectionNum))
-		return areSame

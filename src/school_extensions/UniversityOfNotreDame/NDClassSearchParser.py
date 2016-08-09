@@ -77,7 +77,7 @@ class NDClassSearchParser(CoursePageParser):
 			openSpots = int(section[5].text)
 			totalSpots = int(section[4].text)
 			coursePageLink = self.__extractLinkToCoursePage(section[0])
-			sections.append(NDClass.NDClass(courseName, crn, courseNumberString, sectionNum, profName, classTimes, openSpots, totalSpots, coursePageLink))
+			sections.append(NDClass.NDClass(courseName, courseNumberString, sectionNum, classTimes, crn, profName, openSpots, totalSpots, coursePageLink))
 
 		NDClassSearchParser.logger.info("Returning all sections for {}...".format(courseNumberString))
 		return sections
