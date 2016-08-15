@@ -3,7 +3,9 @@
 # Member variables:
 # classes: a list of Class objects that represent the classes in the schedule
 
-class Schedule(object):
+from src.class_scheduler.ClassSchedulerJSONEncoder import JSONEncoderInterface
+
+class Schedule(JSONEncoderInterface):
 
 	# Constructor for Schedule object
 	def __init__(self, classes=[]):
@@ -44,6 +46,9 @@ class Schedule(object):
 	def size(self):
 		return len(self.classes)
 
+	# Helper function to return the object in a JSON serializable format
+	def _toJSON(self):
+		return self.classes
 
 	# Method to allow use of the "in" operator for classes in the schedule
 	# Ex. if newClass in currentSchedule: now functions properly

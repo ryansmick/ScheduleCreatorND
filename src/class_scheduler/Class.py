@@ -2,21 +2,29 @@
 # This module defines an abstract class that represents a class at a school
 
 from abc import ABC, abstractmethod
+from src.class_scheduler.ClassSchedulerJSONEncoder import JSONEncoderInterface
+from src.class_scheduler.SectionList import SectionList
 
 #Class to represent a section of a course at a school
-# Subclasses must override conflictsWith and __eq__
-class Class(ABC):
+# Subclasses must override conflictsWith, and may need to override __eq__
+class Class(JSONEncoderInterface, ABC):
 
 	# Constructor for Class object
-	# Subclasses should define member variables self.name and self.classTimes
-	#name: the name of the course
+	# Member variables:
+	# name: the name of the course
+	# courseNum: the course number for the given Class object
+	# sectionNum: the section number for the given Class object
 	# classTimes: a dictionary of ClassTime objects describing when class meetings take place;
 	#   Keys are uppercase day identifiers (i.e. M, T, W, R, F)
 	#   Use the key "U" with an UndefinedClassTime object to indicate that a particular class has an undefined time
-	def __init__(self, name, classTimes):
+	# corecs: a SectionList object that defines the corecs for the given class
+	def __init__(self, name, courseNum, sectionNum, classTimes):
 		self.name = name
+		self.courseNum = courseNum
+		self.sectionNum = sectionNum
 		self.classTimes = {}
 		self.addTimes(classTimes)
+		self.corecs = SectionList()
 
 	# Function to determine if two classes conflict
 	# Returns true if the classes cannot be taken together, false otherwise
@@ -30,8 +38,24 @@ class Class(ABC):
 		for day in times:
 			self.classTimes[day.upper()] = times[day]
 
+	# Function to add a corec to the class
+	# courseNum: the course number of the corec
+	# sectionList: a Python list of Class objects that represent the classes of courseNum that are corecs for
+	# the class section represented by self
+	def addCorec(self, courseNum, sectionsList):
+		self.corecs.insertSectionsForNewCourse(courseNum, sectionsList)
+
+	# Function to determine if the class has any corecs
+	def hasCorecs(self):
+		return not self.corecs.isEmpty()
+
+	# Helper function to return the object in a JSON serializable format
+	def _toJSON(self):
+		return dict(__type__="Class", name=self.name, courseNum=self.courseNum, sectionNum=self.sectionNum,
+		            classTimes=self.classTimes)
+
 	# Function to allow use of in operator when a Class object is in a container
-	# Any subclass must override this method, because the ScheduleBuilder makes use of the in operator
-	@abstractmethod
+	# A subclass can override this method or use the default implementation
 	def __eq__(self, other):
-		raise NotImplementedError
+		areSame = ((self.courseNum == other.courseNum) and (self.sectionNum == other.sectionNum))
+		return areSame

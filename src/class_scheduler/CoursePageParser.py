@@ -13,9 +13,3 @@ class CoursePageParser(ABC):
 	@abstractmethod
 	def getAllSectionsForCourse(self, courseNumberString):
 		raise NotImplementedError
-
-	# Function to get the corequisites for a specific course
-	# classObject is an object of the Class class
-	@abstractmethod
-	def getCorecInfo(self, classObject):
-		raise NotImplementedError
