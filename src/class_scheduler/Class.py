@@ -2,11 +2,12 @@
 # This module defines an abstract class that represents a class at a school
 
 from abc import ABC, abstractmethod
+from src.class_scheduler.ClassSchedulerJSONEncoder import JSONEncoderInterface
 from src.class_scheduler.SectionList import SectionList
 
 #Class to represent a section of a course at a school
 # Subclasses must override conflictsWith, and may need to override __eq__
-class Class(ABC):
+class Class(JSONEncoderInterface, ABC):
 
 	# Constructor for Class object
 	# Member variables:
@@ -47,6 +48,11 @@ class Class(ABC):
 	# Function to determine if the class has any corecs
 	def hasCorecs(self):
 		return not self.corecs.isEmpty()
+
+	# Helper function to return the object in a JSON serializable format
+	def _toJSON(self):
+		return dict(__type__="Class", name=self.name, courseNum=self.courseNum, sectionNum=self.sectionNum,
+		            classTimes=self.classTimes)
 
 	# Function to allow use of in operator when a Class object is in a container
 	# A subclass can override this method or use the default implementation
