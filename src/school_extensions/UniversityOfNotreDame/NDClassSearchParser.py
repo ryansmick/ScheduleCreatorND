@@ -44,11 +44,9 @@ class NDClassSearchParser(CoursePageParser):
 
 		#Determine which department the course is in
 		try:
-			match = re.match('(\w{2,4})(\d{5})', courseNumberString)
-			dept = match.group(1)
-			num = match.group(2)
+			dept, num = NDClassSearchParser.__parseCourseNumber(courseNumberString)
 		except AttributeError as e:
-			raise ValueError("Invalid course number format for {}".format(courseNumberString)) from e
+			raise
 
 		try:
 			table = self._getClassSearchTable(dept)
@@ -258,6 +256,18 @@ class NDClassSearchParser(CoursePageParser):
 		result = result.replace('&amp;', '&')
 		return cls.classSearchURL + result
 
+	# Function to parse the course number string and return a tuple containing the department and number of the class
+	# Raises an AttributeError if the course number doesn't match the pattern for Notre Dame course numbers
+	@staticmethod
+	def __parseCourseNumber(courseNumberString):
+		try:
+			match = re.match('(\w{2,4})(\d{5})', courseNumberString)
+			dept = match.group(1)
+			num = match.group(2)
+		except AttributeError as e:
+			raise ValueError("Invalid course number format for {}".format(courseNumberString)) from e
+
+		return (dept, num)
 
 # NDClassSearchParserWithCaching:
 # This class extends NDClassSearchParser to allow for caching of Class Search tables, allowing for faster results when
