@@ -66,25 +66,39 @@ class NDClassSearchParser(CoursePageParser):
 		#Create class objects for each class
 		sections = []
 		for section in sectionsHTML:
-			courseName = section[1].text
-			crn = section[7].text
-			sectionNum = NDClassSearchParser.__getSectionNumber(section[0].text)
-			profName = NDClassSearchParser.__sanitizeProf(section[9].text)
-			try:
-				classTimes = NDClassSearchParser.__getClassTimes(section[10].text)
-			except ValueError:
-				classTimes = {"U":UndefinedClassTime()}
-			openSpots = int(section[5].text)
-			totalSpots = int(section[4].text)
-			coursePageLink = self.__extractLinkToCoursePage(section[0])
-			newClass = NDClass.NDClass(courseName, courseNumberString, sectionNum, classTimes, crn, profName, openSpots, totalSpots, coursePageLink)
-			if addCorecs:
-				self._populateCorecs(newClass)
-			sections.append(newClass)
+			sections.append(self.__generateClassObjectFromTable(section, addCorecs))
 
 		NDClassSearchParser.logger.info("Returning all sections for {}...".format(courseNumberString))
+
+		# Return list containing Class objects for every section in the course
 		return sections
 
+	# Obtain the Class object for a given section of a given course
+	# Accepts the course number and the section as a string
+	# Raises a ValueError when the course number can't be parsed, the department is invalid, or the course can't be found.
+	def getCourseSection(self, courseNumberString, sectionString, addCorecs=True):
+		courseNumberString = NDClassSearchParser.__sanitizeCourseNumber(courseNumberString)
+
+		# Determine which department the course is in
+		try:
+			dept, num = NDClassSearchParser.__parseCourseNumber(courseNumberString)
+			sectionNum = NDClassSearchParser.__sanitizeSectionNumber(sectionString)
+		except ValueError as e:
+			raise
+
+		try:
+			table = self._getClassSearchTable(dept)
+		except ValueError as e:
+			raise
+
+		# Return correct Class object
+		for row in table.findAll('tr'):
+			cells = row.findAll('td')
+			if re.match(courseNumberString + " - " + sectionNum, cells[0].text):
+				return self.__generateClassObjectFromTable(cells, addCorecs)
+
+		# If no class section is found, throw an exception
+		raise ValueError("{}-{} not found".format(courseNumberString, sectionNum))
 
 
 	######Internal Functions######
@@ -125,7 +139,43 @@ class NDClassSearchParser(CoursePageParser):
 				NDClassSearchParser.logger.info("Retrieved info for corecs of {}...".format(courseNumber))
 				return corecInfo
 
-	#Function to get the most recent term available on ClassSearch
+	# Function to return an NDClass object based on a table parsed from Class Search
+	def __generateClassObjectFromTable(self, sectionTable, addCorecs=True):
+		# Pull cells out of table from Class Search
+		courseName = sectionTable[1].text
+		crn = sectionTable[7].text
+		courseNumberString, sectionNum = NDClassSearchParser.__getCourseAndSectionNumber(sectionTable[0].text)
+		profName = NDClassSearchParser.__sanitizeProf(sectionTable[9].text)
+		try:
+			classTimes = NDClassSearchParser.__getClassTimes(sectionTable[10].text)
+		except ValueError:
+			classTimes = {"U": UndefinedClassTime()}
+		openSpots = int(sectionTable[5].text)
+		totalSpots = int(sectionTable[4].text)
+		coursePageLink = NDClassSearchParser.__extractLinkToCoursePage(sectionTable[0])
+
+		#Create new Class object
+		newClass = NDClass.NDClass(courseName, courseNumberString, sectionNum, classTimes, crn, profName, openSpots,
+			totalSpots, coursePageLink)
+		if addCorecs:
+			self._populateCorecs(newClass)
+
+		return newClass
+
+	# Standardize the section numbers
+	# Raises a ValueError if the format is incorrect
+	@staticmethod
+	def __sanitizeSectionNumber(sectionNum):
+		sectionNum = sectionNum.strip()
+		sectionNum = sectionNum.replace(" ", "")
+
+		if len(sectionNum) < 2:
+			sectionNum = "0" + sectionNum
+		elif len(sectionNum) > 2:
+			raise ValueError("Invalid section number format for {}".format(sectionNum))
+		return sectionNum
+
+
 	@staticmethod
 	def __sanitizeCourseNumber(courseNumber):
 		# Remove all whitespace from courseNumber
@@ -138,6 +188,7 @@ class NDClassSearchParser(CoursePageParser):
 		NDClassSearchParser.logger.debug("Returning sanitized course number: {}...".format(courseNumber))
 		return courseNumber
 
+	# Function to get the most recent term available on ClassSearch
 	@classmethod
 	def __getMostRecentTerm(cls):
 		response = requests.post(cls.classSearchURL)
@@ -183,10 +234,13 @@ class NDClassSearchParser(CoursePageParser):
 
 	#Take the entire course number field from Class Search and parse it to obtain the section number
 	@staticmethod
-	def __getSectionNumber(courseNumField):
-		pattern = re.compile('\s\d{2}')
-		classSection = pattern.findall(courseNumField)[0]
-		return classSection[1:]
+	def __getCourseAndSectionNumber(courseNumField):
+		courseNumPattern = re.compile('\w{2,4}\d{5}')
+		courseNum = courseNumPattern.findall(courseNumField)[0]
+		courseNum = NDClassSearchParser.__sanitizeCourseNumber(courseNum)
+		secNumPattern = re.compile('\s\d{2}')
+		classSection = secNumPattern.findall(courseNumField)[0]
+		return (courseNum, classSection[1:])
 
 	#Converts a time in the Class Search format to a time in hours and minutes
 	@staticmethod
@@ -257,7 +311,7 @@ class NDClassSearchParser(CoursePageParser):
 		return cls.classSearchURL + result
 
 	# Function to parse the course number string and return a tuple containing the department and number of the class
-	# Raises an AttributeError if the course number doesn't match the pattern for Notre Dame course numbers
+	# Raises an ValueError if the course number doesn't match the pattern for Notre Dame course numbers
 	@staticmethod
 	def __parseCourseNumber(courseNumberString):
 		try:
