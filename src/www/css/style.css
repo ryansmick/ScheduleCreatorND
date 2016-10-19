@@ -1,12 +1,11 @@
-.form-group {
+.navbar-form .form-group {
 	width: 100%;
 }
 
 .navbar-form .form-group input {
-	width: 100%;
 	margin-bottom: 5px;
 }
 
-button {
-	width: 100%;
+.navbar-form button {
+	float: right;
 }
